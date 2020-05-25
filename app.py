@@ -46,13 +46,26 @@ def home_endpoint():
 
 @app.route('/sentiment_analysis', methods=['GET'])
 def get_prediction():
-    # Works only for a single sample
     if request.method == 'GET':
         ticker = request.args.get('ticker')
         url = ('https://stocknewsapi.com/api/v1?tickers={0}&items=50&token={1}'.format(ticker,api_key))
         r = requests.get(url)
         x = r.json()
         df = pd.DataFrame(x['data'])
+        df = df[['title', 'text', 'source_name', 'date']]
+        df['date'] = pd.to_datetime(df['date'])
+        analyzer = SentimentIntensityAnalyzer()
+        df['sentiment']  = df.apply(lambda row: sentence_sentiment(row['text']),axis=1)
+        df1 = df.groupby([df['date'].dt.date,df['sentiment']]).size().unstack(fill_value=0).stack().reset_index(name='count')
+        df1['date'] = pd.to_datetime(df1['date']).dt.strftime('%Y-%m-%d')
+        df2 = df.groupby(df['sentiment']).size()
+    return {'date_group_by': df1.to_json(orient='records'), 'sentiment_analysis': df2.to_json()}
+
+@app.route('/sentiment_analysis_csv', methods=['POST'])
+def get_prediction_csv():
+    if request.method == 'POST':
+        r = request.get_json()
+        df = pd.DataFrame(r)
         df = df[['title', 'text', 'source_name', 'date']]
         df['date'] = pd.to_datetime(df['date'])
         analyzer = SentimentIntensityAnalyzer()
