@@ -52,7 +52,7 @@ def get_prediction():
         r = requests.get(url)
         x = r.json()
         df = pd.DataFrame(x['data'])
-        df = df[['title', 'text', 'source_name', 'date']]
+        df = df[['text', 'date']]
         df['date'] = pd.to_datetime(df['date'])
         analyzer = SentimentIntensityAnalyzer()
         df['sentiment']  = df.apply(lambda row: sentence_sentiment(row['text']),axis=1)
@@ -66,7 +66,7 @@ def get_prediction_csv():
     if request.method == 'POST':
         r = request.get_json()
         df = pd.DataFrame(r)
-        df = df[['title', 'text', 'source_name', 'date']]
+        df = df[['text', 'date']]
         df['date'] = pd.to_datetime(df['date'])
         analyzer = SentimentIntensityAnalyzer()
         df['sentiment']  = df.apply(lambda row: sentence_sentiment(row['text']),axis=1)
@@ -75,6 +75,16 @@ def get_prediction_csv():
         df2 = df.groupby(df['sentiment']).size()
     return {'date_group_by': df1.to_json(orient='records'), 'sentiment_analysis': df2.to_json()}
 
+@app.route('/get_name', methods=['GET'])
+def get_name():
+    if request.method == 'GET':
+        ticker = request.args.get('ticker')
+        url = ('https://ticker-2e1ica8b9.now.sh/keyword/{0}'.format(ticker.lower()))
+        r = requests.get(url)
+        x = r.json()
+        for index,i in enumerate(x):
+            if i['symbol'] == ticker:
+                return x[index]
 
 if __name__ == "__main__":
      app.run(debug = True,host='0.0.0.0', port=5000 )
